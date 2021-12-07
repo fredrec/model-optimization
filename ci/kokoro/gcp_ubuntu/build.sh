@@ -50,4 +50,4 @@ docker run \
 
 # Kokoro will rsync this entire directory back to the executor orchestrating the
 # build which takes forever and is totally useless.
-sudo rm -rf "${KOKORO_ARTIFACTS_DIR?}"/*
+# sudo rm -rf "${KOKORO_ARTIFACTS_DIR?}"/*
