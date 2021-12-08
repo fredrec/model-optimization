@@ -32,6 +32,7 @@ set -e
 #set -x
 
 # The TFMOT Git repository is checked out here.
+# TODO(frec): print error message of set sensible default
 GIT_REPO_DIR="${KOKORO_ARTIFACTS_DIR?:}/github/tensorflow_model_optimization"
 
 cleanup() {

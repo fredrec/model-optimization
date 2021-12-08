@@ -34,6 +34,7 @@ pip3 install --requirement "requirements.txt"
 bazel test \
   --test_verbose_timeout_warnings \
   //tensorflow_model_optimization/python/core/... \
+  -- \
   -//tensorflow_model_optimization/python/core/quantization/keras:quantize_models_test
 
 
