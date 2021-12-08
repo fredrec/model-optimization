@@ -33,5 +33,5 @@ pip3 install --requirement "requirements.txt"
 
 bazel test \
   --test_verbose_timeout_warnings \
-  //tensorflow_model_optimization/python/core/sparsity/keras:prune_test
-#   //tensorflow_model_optimization/python/core/...
+  //tensorflow_model_optimization/python/core/...
+# //tensorflow_model_optimization/python/core/sparsity/keras:prune_test
