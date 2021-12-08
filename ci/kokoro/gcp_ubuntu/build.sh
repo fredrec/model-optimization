@@ -29,7 +29,7 @@ set -e
 #  the credentials being printed in build logs.
 #  Additionally, recursive invocation with credentials as command-line
 #  parameters, will print the full command, with credentials, in the build logs.
-set -x
+#set -x
 
 # The TFMOT Git repository is checked out here.
 GIT_REPO_DIR="${KOKORO_ARTIFACTS_DIR?:}/github/tensorflow_model_optimization"
@@ -80,8 +80,3 @@ trap cleanup EXIT
 
 # Run the tests inside the container,
 docker exec tfmot "${GIT_REPO_DIR}/ci/kokoro/build.sh"
-
-# Kokoro will rsync the entire artifacts directory back to the executor
-# orchestrating the build, which takes forever.
-# Remove the useless bits to save time.
-# sudo rm -rf "${GIT_REPO_DIR?}"/*
