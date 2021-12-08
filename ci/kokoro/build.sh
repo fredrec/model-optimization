@@ -26,6 +26,12 @@ set -e
 #  parameters, will print the full command, with credentials, in the build logs.
 # set -x
 
+# TODO: rename: run_kokoro_tests.sh
+# TODO: only 1 attempt
+
 pip3 install --requirement "requirements.txt"
 
-bazel test --python_path=$PYTHON_BIN --test_verbose_timeout_warnings //tensorflow_model_optimization/python/core/...
+bazel test \
+  --test_verbose_timeout_warnings \
+  //tensorflow_model_optimization/python/core/sparsity/keras:prune_test
+#   //tensorflow_model_optimization/python/core/...

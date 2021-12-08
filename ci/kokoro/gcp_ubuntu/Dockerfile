@@ -26,38 +26,33 @@
 #
 #  docker run -it --volume "${WORKDIR}:/usr/src/tfmot" {TAG}
 
-FROM ubuntu:18.04
-WORKDIR /usr/src/tfmot
+
+# Latest Ubuntu LTS (Focal), at the moment.
+FROM ubuntu:20.04
+
+
+ARG BAZEL_VERSION=4.2.2
+ARG TENSORFLOW_VERSION=2.7.0
+
 
 RUN apt-get update -y
 
-# Install Python 3.
-#
-# Using Python 3.7 since 3.8 is not compatible with TensorFlow
-# versions <= 2.1.
-RUN apt-get install -y software-properties-common
-RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt-get install -y python3.7
-ENV PYTHON_BIN /usr/bin/python3.7
+# Install Python3 and set it as default
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+   python3 \
+   python3-pip \
+   && update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 # Install Bazel.
-# https://docs.bazel.build/versions/master/install-ubuntu.html
-ARG BAZEL_VERSION=3.4.1
-RUN apt-get install -y unzip zip wget \
-   && wget "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION?}/bazel-${BAZEL_VERSION?}-installer-linux-x86_64.sh" \
-   && chmod +x "bazel-${BAZEL_VERSION?}-installer-linux-x86_64.sh" \
-   && "./bazel-${BAZEL_VERSION?}-installer-linux-x86_64.sh" --user \
-   && rm "bazel-${BAZEL_VERSION?}-installer-linux-x86_64.sh"
-ENV PATH "/root/bin:${PATH}"
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y unzip zip wget \
+   && wget -O bazel-installer.sh "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION?}/bazel-${BAZEL_VERSION?}-installer-linux-x86_64.sh" \
+   && chmod +x "bazel-installer.sh" \
+   && "./bazel-installer.sh" \
+   && rm "bazel-installer.sh"
 
-# Install clang, which is required by bazel during building TFMOT.
-RUN apt-get install -y clang
+# Install Clang, which is required by Bazel for building TFMOT.
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y clang
 ENV CC clang
 
-# Install pip.
-RUN apt-get install -y python3-pip
-# Upgrade pip3 to be able to detect additional TensorFlow versions.
-RUN pip3 install --upgrade pip
-
-# Install latest TensorFlow 2.0.X.
-RUN pip3 install tensorflow==2.0.0
+# Install TensorFlow
+RUN pip install "tensorflow==${TENSORFLOW_VERSION}"

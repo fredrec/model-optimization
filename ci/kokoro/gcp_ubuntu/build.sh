@@ -18,7 +18,6 @@
 # be used to reproduce errors locally by modifying WORKDIR to be
 # the top-level directory of the checked out TFMOT Github repository.
 
-# TODO(b/185727163): switch to prebuilt Docker image to speed this up.
 
 # Fail on any error.
 set -e
@@ -30,37 +29,59 @@ set -e
 #  the credentials being printed in build logs.
 #  Additionally, recursive invocation with credentials as command-line
 #  parameters, will print the full command, with credentials, in the build logs.
-# set -x
+set -x
 
-capture_test_logs() {
-  # based on http://cs/google3/third_party/fhir/kokoro/common.sh?rcl=211854506&l=18
-  mkdir -p "$KOKORO_ARTIFACTS_DIR"
-  # copy all test.log and test.xml files to the kokoro artifacts directory
-  find -L bazel-testlogs -name "test.log" -o -name "test.xml" -exec cp --parents {} "$KOKORO_ARTIFACTS_DIR" \;
-  # Rename the copied test.log and test.xml files to sponge_log.log and sponge_log.xml
-  find -L "$KOKORO_ARTIFACTS_DIR" -name "test.log" -exec rename 's/test.log/sponge_log.log/' {} \;
-  find -L "$KOKORO_ARTIFACTS_DIR" -name "test.xml" -exec rename 's/test.xml/sponge_log.xml/' {} \;
+# The TFMOT Git repository is checked out here.
+GIT_REPO_DIR="${KOKORO_ARTIFACTS_DIR?:}/github/tensorflow_model_optimization"
+
+cleanup() {
+  # Collect the test logs.
+  docker exec tfmot find \
+    -L "bazel-testlogs" \
+    \( -name "test.log" -o -name "test.xml" \) \
+    -exec cp --parents {} "${KOKORO_ARTIFACTS_DIR}" \;
+
+  # Rename test.xml to sponge_log.xml so they show up in Sponge.
+   docker exec tfmot find "${KOKORO_ARTIFACTS_DIR}/bazel-testlogs" \
+    -type f \
+    -name test.xml \
+    -execdir mv "{}" sponge_log.xml \;
+
+  # Rename test.log to sponge_log.log so they show up in Sponge.
+  docker exec tfmot find "${KOKORO_ARTIFACTS_DIR}/bazel-testlogs" \
+    -type f \
+    -name test.log \
+    -execdir mv "{}" sponge_log.log \;
+
+  # Stop the container
+  docker stop tfmot
 }
 
-# Run capture_test_logs when the script exits
-trap capture_test_logs EXIT
-
-# Code under repo is checked out to
-# ${KOKORO_ARTIFACTS_DIR}/github/tensorflow_model_optimization.
-WORKDIR="${KOKORO_ARTIFACTS_DIR}/github/tensorflow_model_optimization"
-
+# Build the Docker image.
+# TODO(b/185727163): switch to prebuilt Docker image to speed this up.
 docker build --tag tfmot \
-  $WORKDIR/ci/kokoro/gcp_ubuntu
+  "${GIT_REPO_DIR}/ci/kokoro/gcp_ubuntu"
 
-# Mount the checked out repository, make that the working directory and run
-# ci/kokoro/build.sh from the repository, which runs all the unit tests.
+# Start a Docker container in the background.
+# The Kokoro artitifacts directory is mounted and the work directory
+# conveniently set to the TFMOT Git repository.
 docker run \
-  --volume "${WORKDIR?}:${WORKDIR?}" \
-  --workdir="${WORKDIR?}" \
+  -it \
+  -d \
   --rm \
+  --name tfmot \
+  --volume "${KOKORO_ARTIFACTS_DIR}:${KOKORO_ARTIFACTS_DIR}" \
+  --workdir="${GIT_REPO_DIR}" \
   tfmot:latest \
-  ci/kokoro/build.sh
+  bash
 
-# Kokoro will rsync this entire directory back to the executor orchestrating the
-# build which takes forever and is totally useless.
-# sudo rm -rf "${KOKORO_ARTIFACTS_DIR?}"/*
+# Collect the test logs and stop the container on exit
+trap cleanup EXIT
+
+# Run the tests inside the container,
+docker exec tfmot "${GIT_REPO_DIR}/ci/kokoro/build.sh"
+
+# Kokoro will rsync the entire artifacts directory back to the executor
+# orchestrating the build, which takes forever.
+# Remove the useless bits to save time.
+# sudo rm -rf "${GIT_REPO_DIR?}"/*
